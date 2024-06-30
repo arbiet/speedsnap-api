@@ -17,7 +17,16 @@ class InternetServiceProviderFactory extends Factory
     public function definition(): array
     {
         return [
-            //
+            'name' => $this->faker->company,
+            'service_type' => 'fiber',
+            'ip' => $this->faker->ipv4,
+            'city' => $this->faker->city,
+            'region' => $this->faker->state,
+            'country' => $this->faker->country,
+            'loc' => $this->faker->latitude . ',' . $this->faker->longitude,
+            'org' => $this->faker->company,
+            'timezone' => $this->faker->timezone,
+            'user_id' => null,
         ];
     }
 }

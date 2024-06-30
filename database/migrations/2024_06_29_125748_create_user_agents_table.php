@@ -16,11 +16,13 @@ return new class extends Migration
         Schema::create('user_agents', function (Blueprint $table) {
             $table->id();
             $table->unsignedBigInteger('user_id')->nullable();
+            $table->unsignedBigInteger('speed_measurement_id');
             $table->text('user_agent');
             $table->timestamps();
 
             // Foreign key constraint
             $table->foreign('user_id')->references('id')->on('users')->onDelete('cascade');
+            $table->foreign('speed_measurement_id')->references('id')->on('speed_measurements')->onDelete('cascade');
         });
     }
 
