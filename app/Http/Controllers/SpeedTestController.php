@@ -13,6 +13,7 @@ use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\DB;
 
 class SpeedTestController extends Controller
 {
@@ -287,5 +288,36 @@ class SpeedTestController extends Controller
                 $errors["device_location.$field"] = "The $field field must be a string.";
             }
         }
+    }
+
+    public function recommendIsp(Request $request)
+    {
+        // Fetch average speed data per ISP per district and city
+        $results = DB::table('speed_measurements')
+            ->join('internet_service_providers', 'speed_measurements.isp_id', '=', 'internet_service_providers.id')
+            ->join('device_locations', 'speed_measurements.id', '=', 'device_locations.speed_measurement_id')
+            ->select(
+                'internet_service_providers.name as isp_name',
+                'device_locations.city',
+                'device_locations.district',
+                DB::raw('AVG(speed_measurements.download_speed) as avg_download_speed'),
+                DB::raw('AVG(speed_measurements.upload_speed) as avg_upload_speed'),
+                DB::raw('AVG(speed_measurements.jitter) as avg_jitter'),
+                DB::raw('AVG(speed_measurements.packet_loss) as avg_packet_loss'),
+                DB::raw('AVG(speed_measurements.ping) as avg_ping'),
+                DB::raw('AVG(speed_measurements.latency) as avg_latency')
+            )
+            ->groupBy('device_locations.city', 'device_locations.district', 'internet_service_providers.name')
+            ->get();
+
+        // Calculate ranking for each district
+        $rankedResults = $results->groupBy('district')->map(function ($districtResults) {
+            return $districtResults->sortByDesc('avg_download_speed')->values()->map(function ($result, $index) {
+                $result->ranking = $index + 1;
+                return $result;
+            });
+        })->flatten(1);
+
+        return response()->json($rankedResults);
     }
 }
