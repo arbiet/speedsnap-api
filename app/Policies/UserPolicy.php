@@ -26,11 +26,11 @@ class UserPolicy
 
     public function update(User $user, User $model)
     {
-        return $user->id === $model->id;
+        return $user->user_type === 'admin';
     }
 
     public function delete(User $user, User $model)
     {
-        return $user->id === $model->id;
+        return $user->user_type === 'admin';
     }
 }
