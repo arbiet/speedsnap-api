@@ -135,6 +135,31 @@ class SpeedTestController extends Controller
             // Save ISP info
             $ispData = $data['isp'];
             $ispData['user_id'] = $userId;
+            
+            // List of known ISPs
+            $knownIsps = [
+                'Biznet', 'My Republic', 'Iconnet', 'SDI', 
+                'Indihome', 'First Media', 'XL Home', 'Jujung net'
+            ];
+            
+            $name = $ispData['name'];
+            $org = $ispData['org'];
+            
+            $isKnownIsp = false;
+            
+            // Check similarity using Levenshtein distance
+            foreach ($knownIsps as $isp) {
+                if ($this->isLevenshteinSimilar($name, $isp) || $this->isLevenshteinSimilar($org, $isp)) {
+                    $isKnownIsp = true;
+                    break;
+                }
+            }
+    
+            if (!$isKnownIsp) {
+                $ispData['name'] = 'ISP Lain';
+                $ispData['org'] = 'ISP Lain';
+            }
+    
             $isp = InternetServiceProvider::create($ispData);
     
             // Save speed measurement
@@ -168,6 +193,21 @@ class SpeedTestController extends Controller
             Log::error('Failed to save speed test results', ['exception' => $e]);
             return response()->json(['error' => 'Internal Server Error'], 500);
         }
+    }
+    
+    /**
+     * Check if two strings are similar using Levenshtein distance
+     * 
+     * @param string $str1
+     * @param string $str2
+     * @return bool
+     */
+    private function isLevenshteinSimilar($str1, $str2)
+    {
+        $levenshteinDistance = levenshtein(strtolower($str1), strtolower($str2));
+        $threshold = 5; // Adjust the threshold as needed
+    
+        return $levenshteinDistance <= $threshold;
     }
     
 
