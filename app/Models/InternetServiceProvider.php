@@ -13,6 +13,7 @@ class InternetServiceProvider extends Model
         'name',
         'service_type',
         'ip',
+        'district',
         'city',
         'region',
         'country',

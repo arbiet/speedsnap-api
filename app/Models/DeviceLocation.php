@@ -12,7 +12,7 @@ class DeviceLocation extends Model
     use HasFactory;
 
     protected $fillable = [
-        'user_id', 'latitude', 'longitude', 'road', 'city', 'state', 'country'
+        'user_id', 'latitude', 'longitude', 'road','district', 'city', 'state', 'country'
     ];
 
     public function user()

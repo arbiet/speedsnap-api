@@ -19,6 +19,7 @@ return new class extends Migration
             $table->enum('service_type', ['fiber', 'dsl', 'cable', 'wireless', 'satellite'])->default('fiber');
             $table->string('ip');
             $table->string('city');
+            $table->string('district');
             $table->string('region');
             $table->string('country');
             $table->string('loc');

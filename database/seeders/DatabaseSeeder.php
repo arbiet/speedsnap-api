@@ -90,7 +90,8 @@ class DatabaseSeeder extends Seeder
                         $isp->country = 'Indonesia'; // Adjust this value as needed
                         $isp->loc = $centralPoint;
                         $isp->org = $ispData['name'];
-                        $isp->timezone = $this->faker->timezone; // Adjust this value as needed
+                        $isp->timezone = $this->faker->timezone;
+                        $isp->district = $kecamatan; // Adjust this value as needed
                         $isp->user_id = $userId;
                         $isp->save();
 
@@ -118,6 +119,10 @@ class DatabaseSeeder extends Seeder
                         $deviceLocationModel->longitude = $deviceLocation['longitude'];
                         $deviceLocationModel->speed_measurement_id = $measurement->id;
                         $deviceLocationModel->user_id = $userId;
+                        $deviceLocationModel->district = $kecamatan;
+                        $deviceLocationModel->city = 'Kediri City'; // Adjust this value as needed
+                        $deviceLocationModel->state = 'East Java'; // Adjust this value as needed
+                        $deviceLocationModel->country = 'Indonesia'; // Adjust this value as needed
                         $deviceLocationModel->save();
 
                         $userAgent = new UserAgent();
