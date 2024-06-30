@@ -20,6 +20,7 @@ class InternetServiceProvider extends Model
         'loc',
         'org',
         'timezone',
+        'speed_measurement_id',
     ];
 
     public function user()

@@ -12,7 +12,7 @@ class UserAgent extends Model
     use HasFactory;
 
     protected $fillable = [
-        'user_id', 'user_agent'
+        'user_id', 'user_agent',  'speed_measurement_id',
     ];
 
     public function user()

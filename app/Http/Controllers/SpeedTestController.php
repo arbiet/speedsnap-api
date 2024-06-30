@@ -130,7 +130,6 @@ class SpeedTestController extends Controller
         }
     
         try {
-            // Determine user ID
             $userId = auth()->check() ? auth()->id() : null;
     
             // Save ISP info
@@ -153,12 +152,14 @@ class SpeedTestController extends Controller
     
             // Save device location
             $deviceLocationData = $data['device_location'];
+            $deviceLocationData['speed_measurement_id'] = $speedMeasurement->id;
             $deviceLocationData['user_id'] = $userId;
             DeviceLocation::create($deviceLocationData);
     
             // Save user agent
             UserAgent::create([
                 'user_id' => $userId,
+                'speed_measurement_id' => $speedMeasurement->id,
                 'user_agent' => $data['user_agent'],
             ]);
     
