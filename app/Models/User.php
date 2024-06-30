@@ -50,4 +50,9 @@ class User extends Authenticatable
     {
         return $this->hasMany(InternetServiceProvider::class);
     }
+
+    public function speedMeasurements()
+    {
+        return $this->hasMany(SpeedMeasurement::class, 'isp_id');
+    }
 }

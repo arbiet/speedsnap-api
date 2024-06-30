@@ -16,7 +16,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/speedtest/ping', [SpeedTestController::class, 'pingTest']);
     Route::get('/speedtest/latency', [SpeedTestController::class, 'latencyTest']);
     Route::get('/ipinfo/token', [SpeedTestController::class, 'getIpInfoToken']);
-    
+    Route::post('/speedtest/results', [SpeedTestController::class, 'storeResults']);
+
     Route::get('/user', function (Request $request) {
         return $request->user();
     });

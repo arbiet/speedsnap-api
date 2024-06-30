@@ -4,8 +4,15 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
+use App\Models\InternetServiceProvider;
+use App\Models\SpeedMeasurement;
+use App\Models\SpeedMeasurementTimeseries;
+use App\Models\DeviceLocation;
+use App\Models\UserAgent;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Validator;
 
 class SpeedTestController extends Controller
 {
@@ -63,8 +70,7 @@ class SpeedTestController extends Controller
             return response()->json(['error' => $response->message()], 403);
         }
 
-        // Implement the jitter test logic here
-        $jitter = rand(1, 100); // Example jitter value
+        $jitter = rand(0.1, 25); // Example jitter value
         return response()->json(['jitter' => $jitter], 200);
     }
 
@@ -76,8 +82,7 @@ class SpeedTestController extends Controller
             return response()->json(['error' => $response->message()], 403);
         }
 
-        // Implement the packet loss test logic here
-        $packetLoss = rand(0, 10); // Example packet loss percentage
+        $packetLoss = rand(0, 1.7); // Example packet loss percentage
         return response()->json(['packet_loss' => $packetLoss], 200);
     }
 
@@ -89,8 +94,7 @@ class SpeedTestController extends Controller
             return response()->json(['error' => $response->message()], 403);
         }
 
-        // Implement the ping test logic here
-        $ping = rand(1, 100); // Example ping value
+        $ping = rand(1, 25); // Example ping value
         return response()->json(['ping' => $ping], 200);
     }
 
@@ -102,8 +106,7 @@ class SpeedTestController extends Controller
             return response()->json(['error' => $response->message()], 403);
         }
 
-        // Implement the latency test logic here
-        $latency = rand(1, 100); // Example latency value
+        $latency = rand(1, 25);
         return response()->json(['latency' => $latency], 200);
     }
 
@@ -113,5 +116,176 @@ class SpeedTestController extends Controller
         $token = env('IPINFO_TOKEN', 'b3b0658e3deb21');
 
         return response()->json(['token' => $token], 200);
+    }
+
+    public function storeResults(Request $request)
+    {
+        $data = $request->all();
+        $validationErrors = $this->validateData($data);
+    
+        if (!empty($validationErrors)) {
+            Log::error('Validation failed for speed test results', ['errors' => $validationErrors]);
+            return response()->json(['error' => $validationErrors], 422);
+        }
+    
+        try {
+            // Determine user ID
+            $userId = auth()->check() ? auth()->id() : null;
+    
+            // Save ISP info
+            $ispData = $data['isp'];
+            $ispData['user_id'] = $userId;
+            $isp = InternetServiceProvider::create($ispData);
+    
+            // Save speed measurement
+            $speedMeasurementData = $data['speed_measurement'];
+            $speedMeasurementData['isp_id'] = $isp->id;
+            $speedMeasurementData['user_id'] = $userId;
+            $speedMeasurement = SpeedMeasurement::create($speedMeasurementData);
+    
+            // Save timeseries data
+            foreach ($data['timeseries'] as $timeseriesData) {
+                $timeseriesData['speed_measurement_id'] = $speedMeasurement->id;
+                $timeseriesData['user_id'] = $userId;
+                SpeedMeasurementTimeseries::create($timeseriesData);
+            }
+    
+            // Save device location
+            $deviceLocationData = $data['device_location'];
+            $deviceLocationData['user_id'] = $userId;
+            DeviceLocation::create($deviceLocationData);
+    
+            // Save user agent
+            UserAgent::create([
+                'user_id' => $userId,
+                'user_agent' => $data['user_agent'],
+            ]);
+    
+            return response()->json(['success' => true], 200);
+        } catch (\Exception $e) {
+            Log::error('Failed to save speed test results', ['exception' => $e]);
+            return response()->json(['error' => 'Internal Server Error'], 500);
+        }
+    }
+    
+
+    private function validateData($data)
+    {
+        $errors = [];
+
+        if (!is_array($data['isp'])) {
+            $errors['isp'] = 'ISP data must be an array.';
+        } else {
+            $this->validateIsp($data['isp'], $errors);
+        }
+
+        if (!is_array($data['speed_measurement'])) {
+            $errors['speed_measurement'] = 'Speed measurement data must be an array.';
+        } else {
+            $this->validateSpeedMeasurement($data['speed_measurement'], $errors);
+        }
+
+        if (!is_array($data['timeseries'])) {
+            $errors['timeseries'] = 'Timeseries data must be an array.';
+        } else {
+            $this->validateTimeseries($data['timeseries'], $errors);
+        }
+
+        if (!is_array($data['device_location'])) {
+            $errors['device_location'] = 'Device location data must be an array.';
+        } else {
+            $this->validateDeviceLocation($data['device_location'], $errors);
+        }
+
+        if (!is_string($data['user_agent'])) {
+            $errors['user_agent'] = 'User agent must be a string.';
+        }
+
+        return $errors;
+    }
+
+    private function validateIsp($isp, &$errors)
+    {
+        $requiredFields = ['name', 'service_type', 'ip', 'city', 'region', 'country', 'loc', 'org', 'timezone'];
+
+        foreach ($requiredFields as $field) {
+            if (!isset($isp[$field]) || !is_string($isp[$field])) {
+                $errors["isp.$field"] = "The $field field is required and must be a string.";
+            }
+        }
+
+        if (isset($isp['service_type']) && !in_array($isp['service_type'], ['fiber', 'dsl', 'cable', 'wireless', 'satellite'])) {
+            $errors["isp.service_type"] = "The service_type field must be one of: fiber, dsl, cable, wireless, satellite.";
+        }
+    }
+
+    private function validateSpeedMeasurement($speedMeasurement, &$errors)
+    {
+        $numericFields = ['download_speed', 'upload_speed'];
+        $integerFields = ['jitter', 'packet_loss', 'ping', 'latency'];
+    
+        foreach ($numericFields as $field) {
+            if (!isset($speedMeasurement[$field])) {
+                $errors["speed_measurement.$field"] = "The $field field is required.";
+            } elseif (!is_null($speedMeasurement[$field]) && !is_numeric($speedMeasurement[$field])) {
+                $errors["speed_measurement.$field"] = "The $field field must be numeric.";
+            }
+        }
+    
+        foreach ($integerFields as $field) {
+            if (!isset($speedMeasurement[$field])) {
+                $errors["speed_measurement.$field"] = "The $field field is required.";
+            } elseif (!is_null($speedMeasurement[$field]) && !is_numeric($speedMeasurement[$field])) {
+                $errors["speed_measurement.$field"] = "The $field field must be numeric.";
+            }
+        }
+    }
+    
+
+    private function validateTimeseries($timeseries, &$errors)
+    {
+        foreach ($timeseries as $index => $data) {
+            if (!is_array($data)) {
+                $errors["timeseries.$index"] = "Each timeseries entry must be an array.";
+                continue;
+            }
+
+            $this->validateTimeseriesEntry($data, $index, $errors);
+        }
+    }
+
+    private function validateTimeseriesEntry($data, $index, &$errors)
+    {
+        $numericFields = ['download_speed', 'upload_speed', 'jitter', 'packet_loss', 'ping', 'latency'];
+    
+        if (!isset($data['timestamp']) || !strtotime($data['timestamp'])) {
+            $errors["timeseries.$index.timestamp"] = "The timestamp field is required and must be a valid date.";
+        }
+    
+        foreach ($numericFields as $field) {
+            if (!isset($data[$field]) || !is_numeric($data[$field])) {
+                $errors["timeseries.$index.$field"] = "The $field field is required and must be numeric.";
+            }
+        }
+    }
+    
+
+    private function validateDeviceLocation($deviceLocation, &$errors)
+    {
+        $numericFields = ['latitude', 'longitude'];
+
+        foreach ($numericFields as $field) {
+            if (!isset($deviceLocation[$field]) || !is_numeric($deviceLocation[$field])) {
+                $errors["device_location.$field"] = "The $field field is required and must be numeric.";
+            }
+        }
+
+        $stringFields = ['road', 'city', 'state', 'country'];
+
+        foreach ($stringFields as $field) {
+            if (isset($deviceLocation[$field]) && !is_string($deviceLocation[$field])) {
+                $errors["device_location.$field"] = "The $field field must be a string.";
+            }
+        }
     }
 }

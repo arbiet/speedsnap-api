@@ -25,4 +25,9 @@ class InternetServiceProvider extends Model
     {
         return $this->belongsTo(User::class);
     }
+
+    public function speedMeasurements()
+    {
+        return $this->hasMany(SpeedMeasurement::class, 'isp_id');
+    }
 }
