@@ -27,4 +27,10 @@ class ServiceProvider extends Model
     {
         return $this->hasMany(ServiceType::class);
     }
+
+    public function aliases()
+    {
+        return $this->hasMany(ServiceProviderAlias::class);
+    }
+
 }

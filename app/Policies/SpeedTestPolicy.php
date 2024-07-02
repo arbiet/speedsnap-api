@@ -14,7 +14,8 @@ class SpeedTestPolicy
      */
     public function speedtest(User $user): Response
     {
-        return in_array($user->user_type, ['admin', 'user'])
+        // Allow all authenticated users to perform speed tests
+        return $user
             ? Response::allow()
             : Response::deny('You do not have permission to perform speed tests.');
     }

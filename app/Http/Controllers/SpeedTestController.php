@@ -9,7 +9,6 @@ use App\Models\SpeedMeasurement;
 use App\Models\SpeedMeasurementTimeseries;
 use App\Models\DeviceLocation;
 use App\Models\UserAgent;
-use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
@@ -20,10 +19,6 @@ class SpeedTestController extends Controller
     public function downloadTest()
     {
         $user = auth()->user();
-        $response = Gate::inspect('speedtest', $user);
-        if ($response->denied()) {
-            return response()->json(['error' => $response->message()], 403);
-        }
 
         $data = str_repeat('0', 1024 * 1024 * 5); // 5MB data
         return response($data, 200, [
@@ -34,17 +29,7 @@ class SpeedTestController extends Controller
 
     public function uploadTest(Request $request)
     {
-        $user = auth()->user();
-        $response = Gate::inspect('speedtest', $user);
-        if ($response->denied()) {
-            return response()->json(['error' => $response->message()], 403);
-        }
-
         try {
-            Log::info('Upload request received', [
-                'user_id' => $user->id,
-                'content_type' => $request->header('Content-Type'),
-            ]);
 
             if (!$request->has('upload_data')) {
                 Log::error('No data uploaded');
@@ -66,10 +51,6 @@ class SpeedTestController extends Controller
     public function jitterTest()
     {
         $user = auth()->user();
-        $response = Gate::inspect('speedtest', $user);
-        if ($response->denied()) {
-            return response()->json(['error' => $response->message()], 403);
-        }
 
         $jitter = rand(0.1, 25); // Example jitter value
         return response()->json(['jitter' => $jitter], 200);
@@ -78,10 +59,6 @@ class SpeedTestController extends Controller
     public function packetLossTest()
     {
         $user = auth()->user();
-        $response = Gate::inspect('speedtest', $user);
-        if ($response->denied()) {
-            return response()->json(['error' => $response->message()], 403);
-        }
 
         $packetLoss = rand(0, 1.7); // Example packet loss percentage
         return response()->json(['packet_loss' => $packetLoss], 200);
@@ -90,10 +67,6 @@ class SpeedTestController extends Controller
     public function pingTest()
     {
         $user = auth()->user();
-        $response = Gate::inspect('speedtest', $user);
-        if ($response->denied()) {
-            return response()->json(['error' => $response->message()], 403);
-        }
 
         $ping = rand(1, 25); // Example ping value
         return response()->json(['ping' => $ping], 200);
@@ -102,10 +75,6 @@ class SpeedTestController extends Controller
     public function latencyTest()
     {
         $user = auth()->user();
-        $response = Gate::inspect('speedtest', $user);
-        if ($response->denied()) {
-            return response()->json(['error' => $response->message()], 403);
-        }
 
         $latency = rand(1, 25);
         return response()->json(['latency' => $latency], 200);
@@ -132,33 +101,33 @@ class SpeedTestController extends Controller
         try {
             $userId = auth()->check() ? auth()->id() : null;
     
-            // Save ISP info
+            // // Save ISP info
             $ispData = $data['isp'];
             $ispData['user_id'] = $userId;
             
-            // List of known ISPs
-            $knownIsps = [
-                'Biznet', 'My Republic', 'Iconnet', 'SDI', 
-                'Indihome', 'First Media', 'XL Home', 'Jujung net'
-            ];
+            // // List of known ISPs
+            // $knownIsps = [
+            //     'Biznet', 'My Republic', 'Iconnet', 'SDI', 
+            //     'Indihome', 'First Media', 'XL Home', 'Jujung net'
+            // ];
             
-            $name = $ispData['name'];
-            $org = $ispData['org'];
+            // $name = $ispData['name'];
+            // $org = $ispData['org'];
             
-            $isKnownIsp = false;
+            // $isKnownIsp = false;
             
-            // Check similarity using Levenshtein distance
-            foreach ($knownIsps as $isp) {
-                if ($this->isLevenshteinSimilar($name, $isp) || $this->isLevenshteinSimilar($org, $isp)) {
-                    $isKnownIsp = true;
-                    break;
-                }
-            }
+            // // Check similarity using Levenshtein distance
+            // foreach ($knownIsps as $isp) {
+            //     if ($this->isLevenshteinSimilar($name, $isp) || $this->isLevenshteinSimilar($org, $isp)) {
+            //         $isKnownIsp = true;
+            //         break;
+            //     }
+            // }
     
-            if (!$isKnownIsp) {
-                $ispData['name'] = 'ISP Lain';
-                $ispData['org'] = 'ISP Lain';
-            }
+            // if (!$isKnownIsp) {
+            //     $ispData['name'] = 'ISP Lain';
+            //     $ispData['org'] = 'ISP Lain';
+            // }
     
             $isp = InternetServiceProvider::create($ispData);
     
