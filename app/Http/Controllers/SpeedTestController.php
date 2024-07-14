@@ -8,6 +8,7 @@ use App\Models\InternetServiceProvider;
 use App\Models\SpeedMeasurement;
 use App\Models\SpeedMeasurementTimeseries;
 use App\Models\DeviceLocation;
+use App\Models\ServiceProvider;
 use App\Models\UserAgent;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
@@ -302,12 +303,23 @@ class SpeedTestController extends Controller
 
     public function recommendIsp(Request $request)
     {
+        // Fetch ServiceProvider data using ServiceProviderAlias
+        $serviceProviders = ServiceProvider::with('aliases')->get();
+
+        // Create a mapping of alias to ServiceProvider
+        $aliasToProviderMap = [];
+        foreach ($serviceProviders as $provider) {
+            foreach ($provider->aliases as $alias) {
+                $aliasToProviderMap[$alias->alias_name] = $provider->provider_name;
+            }
+        }
+
         // Fetch average speed data per ISP per district and city
         $results = DB::table('speed_measurements')
             ->join('internet_service_providers', 'speed_measurements.isp_id', '=', 'internet_service_providers.id')
             ->join('device_locations', 'speed_measurements.id', '=', 'device_locations.speed_measurement_id')
             ->select(
-                'internet_service_providers.name as isp_name',
+                'internet_service_providers.org as isp_alias',
                 'device_locations.city',
                 'device_locations.district',
                 DB::raw('AVG(speed_measurements.download_speed) as avg_download_speed'),
@@ -317,8 +329,14 @@ class SpeedTestController extends Controller
                 DB::raw('AVG(speed_measurements.ping) as avg_ping'),
                 DB::raw('AVG(speed_measurements.latency) as avg_latency')
             )
-            ->groupBy('device_locations.city', 'device_locations.district', 'internet_service_providers.name')
+            ->groupBy('device_locations.city', 'device_locations.district', 'internet_service_providers.org')
             ->get();
+
+        // Map ISP aliases to Service Provider names using the alias mapping
+        $results->transform(function ($result) use ($aliasToProviderMap) {
+            $result->isp_name = $aliasToProviderMap[$result->isp_alias] ?? $result->isp_alias;
+            return $result;
+        });
 
         // Calculate ranking for each district
         $rankedResults = $results->groupBy('district')->map(function ($districtResults) {

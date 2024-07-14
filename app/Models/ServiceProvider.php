@@ -32,5 +32,8 @@ class ServiceProvider extends Model
     {
         return $this->hasMany(ServiceProviderAlias::class);
     }
-
+    public function internetServiceProviders()
+    {
+        return $this->hasMany(InternetServiceProvider::class, 'org', 'provider_name');
+    }
 }
